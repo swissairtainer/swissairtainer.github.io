@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         # with:
           # repository: ${{ github.repository_owner }}/swissairtainer.github.io # Dynamically use the organization of the running workflow
           # token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Use a personal access token with the correct permissions
 
       - name: Fetch and organize attachments
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
