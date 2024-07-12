@@ -18,7 +18,7 @@ jobs:
       - name: Fetch and organize attachments
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.SWAT_RELEASES_TOKEN }}
+          github-token: ${{ secrets.SWAT_RELEASES }}
           script: |
             const fs = require('fs');
             const path = require('path');
