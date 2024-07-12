@@ -1,0 +1,57 @@
+name: Fetch Release Attachments
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  fetch-attachments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        # with:
+          # repository: ${{ github.repository_owner }}/swissairtainer.github.io # Dynamically use the organization of the running workflow
+          # token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Use a personal access token with the correct permissions
+
+      - name: Fetch and organize attachments
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            async function downloadAsset(asset, repo, tag) {
+              const assetPath = `fw/${repo}/${tag}/${asset.name}`;
+              const response = await github.request('GET ' + asset.url, {
+                headers: {
+                  'Accept': 'application/octet-stream',
+                  'Authorization': `token ${secrets.GITHUB_TOKEN}`
+                }
+              });
+              const dir = path.dirname(assetPath);
+              if (!fs.existsSync(dir)){
+                fs.mkdirSync(dir, { recursive: true });
+              }
+              fs.writeFileSync(assetPath, Buffer.from(response.data));
+              console.log(`Downloaded: ${assetPath}`);
+            }
+
+            for (const repo of await github.paginate(github.rest.repos.listForOrg, { org: context.repo.owner })) {
+              const releases = await github.paginate(github.rest.repos.listReleases, { owner: context.repo.owner, repo: repo.name });
+              for (const release of releases) {
+                for (const asset of release.assets) {
+                  await downloadAsset(asset, repo.name, release.tag_name);
+                }
+              }
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update release attachments" and git push)
