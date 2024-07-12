@@ -40,7 +40,10 @@ jobs:
 
             const repos = await github.paginate(github.rest.repos.listForOrg, { org: context.repo.owner });
             console.log(`Total repositories fetched: ${repos.length}`);
-            for (const repo of repos) {
+            const privateRepos = repos.filter(repo => repo.private);
+            console.log(`Total private repositories fetched: ${privateRepos.length}`);
+
+            for (const repo of privateRepos) {
               console.log(`Processing repository: ${repo.name}`);
               const releases = await github.paginate(github.rest.repos.listReleases, { owner: context.repo.owner, repo: repo.name });
               console.log(`Found ${releases.length} releases in ${repo.name}`);
@@ -52,7 +55,7 @@ jobs:
               }
             }
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SWAT_RELEASES_TOKEN }}
 
       - name: Commit and push changes
         run: |
