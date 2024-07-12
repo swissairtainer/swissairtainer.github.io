@@ -41,7 +41,7 @@ jobs:
 
             const repos = await github.paginate(github.rest.repos.listForOrg, { org: context.repo.owner });
             console.log(`Total repositories fetched: ${repos.length}`);
-            const privateRepos = repos.filter(repo => repo.private);
+            const privateRepos = repos.filter(repo => repo.private && repo.name.toLowerCase().endsWith('firmware'));
             console.log(`Total private repositories fetched: ${privateRepos.length}`);
 
             for (const repo of privateRepos) {
