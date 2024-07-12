@@ -21,12 +21,11 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const octokit = github.getOctokit(process.env.SWAT_RELEASES_TOKEN);
-            
+
             async function downloadAsset(asset, repo, tag) {
               const assetPath = `fw/${repo}/${tag}/${asset.name}`;
               console.log(`Preparing to download asset: ${asset.name} from ${repo}/${tag}`);
-              const response = await octokit.request('GET ' + asset.url, {
+              const response = await github.request('GET ' + asset.url, {
                 headers: {
                   'Accept': 'application/octet-stream'
                 }
@@ -39,14 +38,14 @@ jobs:
               console.log(`Downloaded: ${assetPath}`);
             }
 
-            const repos = await octokit.paginate(github.rest.repos.listForOrg, { org: context.repo.owner });
+            const repos = await github.paginate(github.rest.repos.listForOrg, { org: context.repo.owner });
             console.log(`Total repositories fetched: ${repos.length}`);
             const privateRepos = repos.filter(repo => repo.private);
             console.log(`Total private repositories fetched: ${privateRepos.length}`);
 
             for (const repo of privateRepos) {
               console.log(`Processing repository: ${repo.name}`);
-              const releases = await octokit.paginate(github.rest.repos.listReleases, { owner: context.repo.owner, repo: repo.name });
+              const releases = await github.paginate(github.rest.repos.listReleases, { owner: context.repo.owner, repo: repo.name });
               console.log(`Found ${releases.length} releases in ${repo.name}`);
               for (const release of releases) {
                 console.log(`Processing release: ${release.tag_name} for repo: ${repo.name}`);
@@ -56,7 +55,7 @@ jobs:
               }
             }
         env:
-          SWAT_RELEASES_TOKEN: ${{ secrets.SWAT_RELEASES_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SWAT_RELEASES_TOKEN }}
 
       - name: Commit and push changes
         run: |
