@@ -64,7 +64,7 @@ jobs:
               }
             }
 
-      - name: Commit and push changes
+      - name: Calculate MD5
         run: |
           process_directory() {
               local dir="$1"
@@ -74,7 +74,7 @@ jobs:
                   # Skip if the item doesn't exist (handles empty directories)
                   if [ ! -e "$file" ]; then
                       continue
-                  }
+                  fi
                   
                   # If it's a directory, process it recursively
                   if [ -d "$file" ]; then
@@ -98,8 +98,8 @@ jobs:
               done
           }
 
-          # Start processing from the current directory
-          process_directory "./fw/"
+          # Start processing from the fw directory
+          process_directory "./fw"
 
       - name: Commit and push changes
         run: |
