@@ -24,9 +24,16 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
             async function downloadAsset(asset, repo, tag) {
+              if (asset.size > MAX_FILE_SIZE) {
+                console.log(`Skipping ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)}MB): Exceeds size limit of 10MB`);
+                return;
+              }
+
               const assetPath = `fw/${repo}/${tag}/${asset.name}`;
-              console.log(`Preparing to download asset: ${asset.name} from ${repo}/${tag}`);
+              console.log(`Preparing to download asset: ${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)}MB) from ${repo}/${tag}`);
               const response = await github.request('GET ' + asset.url, {
                 headers: {
                   'Accept': 'application/octet-stream'
