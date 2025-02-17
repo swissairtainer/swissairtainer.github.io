@@ -66,6 +66,43 @@ jobs:
 
       - name: Commit and push changes
         run: |
+          process_directory() {
+              local dir="$1"
+              
+              # Loop through all files in the current directory
+              for file in "$dir"/*; do
+                  # Skip if the item doesn't exist (handles empty directories)
+                  if [ ! -e "$file" ]; then
+                      continue
+                  }
+                  
+                  # If it's a directory, process it recursively
+                  if [ -d "$file" ]; then
+                      process_directory "$file"
+                      continue
+                  fi
+                  
+                  # Skip if the file is an .md5 file
+                  if [[ "$file" == *.md5 ]]; then
+                      continue
+                  fi
+                  
+                  # Skip if an .md5 file already exists for this file
+                  if [ -f "${file}.md5" ]; then
+                      continue
+                  fi
+                  
+                  # Calculate MD5 and save to .md5 file
+                  md5sum "$file" > "${file}.md5"
+                  echo "Created MD5 hash for: $file"
+              done
+          }
+
+          # Start processing from the current directory
+          process_directory "./fw/"
+
+      - name: Commit and push changes
+        run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git status
