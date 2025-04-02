@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Freight CO2 Calculator</title>
+    <title>Air Freight CO2 Calculator with 3D Globe</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://unpkg.com/globe.gl"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,6 +14,7 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #fff; /* White body background */
         }
         h1 {
             color: #2c5282;
@@ -72,11 +74,16 @@
             margin-top: 30px;
         }
         .chart-container {
-            height: 300px;
+            /* Adjusted chart height slightly due to smaller globe */
+            height: 280px;
             margin-top: 20px;
         }
         .green-text {
             color: #38a169;
+            font-weight: bold;
+        }
+        .blue-text {
+            color: #3182ce; /* Added blue text for fuel savings */
             font-weight: bold;
         }
         .flex-container {
@@ -89,113 +96,133 @@
         .hidden {
             display: none;
         }
-        .map-placeholder {
-            background-color: #ebf8ff;
-            border: 1px solid #bee3f8;
+        #globeViz {
+            width: 100%;
+            /* MODIFIED: Smaller globe height */
+            height: 350px;
             border-radius: 4px;
-            padding: 20px;
-            text-align: center;
+            /* MODIFIED: White background */
+            background-color: #ffffff;
+            cursor: grab;
+            position: relative;
+            border: 1px solid #ccc; /* Added subtle border */
+        }
+        #globeViz:active {
+            cursor: grabbing;
         }
     </style>
 </head>
 <body>
     <h1>Air Freight CO2 Calculator</h1>
-    
+
     <div class="container">
         <!-- Route Information -->
         <div class="card">
             <h2>Route Information</h2>
-            
+
             <div class="form-group">
                 <label for="fromAirport">From Airport (IATA code)</label>
                 <select id="fromAirport">
                     <option value="">Select departure airport</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label for="toAirport">To Airport (IATA code)</label>
                 <select id="toAirport">
                     <option value="">Select arrival airport</option>
                 </select>
             </div>
-            
+
             <div class="form-group">
                 <label for="numContainers">Number of Containers</label>
                 <input type="number" id="numContainers" value="150" min="1">
             </div>
-            
+
             <div class="form-group">
                 <label for="cargoWeight">Cargo Weight per Container (kg)</label>
                 <input type="number" id="cargoWeight" value="1000" min="0">
             </div>
-            
-            <button id="calculateBtn">Calculate Emissions</button>
-            
+
+            <button id="calculateBtn">Calculate Emissions & Show Route</button>
+
             <p id="errorMsg" class="hidden" style="color: red; margin-top: 10px;"></p>
         </div>
-        
+
         <!-- Assumptions -->
         <div class="card">
             <h2>Assumptions</h2>
-            
+
             <div class="flex-container">
                 <div class="form-group">
                     <label for="swissWeight">Swiss Airtainer Weight (kg)</label>
                     <input type="number" id="swissWeight" value="590" min="0">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="competitorWeight">Competitor Weight (kg)</label>
                     <input type="number" id="competitorWeight" value="650" min="0">
                 </div>
             </div>
-            
+
             <div class="flex-container">
                 <div class="form-group">
                     <label for="emissionFactor">Emission Factor (kg CO2/tonne-km)</label>
                     <input type="number" id="emissionFactor" value="0.6" step="0.01" min="0">
                 </div>
-                
+                <!-- ADDED: Fuel Burn Factor Input -->
                 <div class="form-group">
+                    <label for="fuelBurnFactor">Fuel Burn (kg fuel / tonne-km)</label>
+                    <input type="number" id="fuelBurnFactor" value="0.04" step="0.001" min="0">
+                </div>
+            </div>
+
+             <div class="flex-container">
+                 <div class="form-group">
                     <label for="treeFactor">Tree Absorption (kg CO2/tree)</label>
                     <input type="number" id="treeFactor" value="25" step="0.1" min="0.1">
                 </div>
-            </div>
-            
-            <div class="flex-container">
                 <div class="form-group">
                     <label for="carFactor">Car Emissions (tonnes CO2/car)</label>
                     <input type="number" id="carFactor" value="4.6" step="0.1" min="0.1">
                 </div>
-                
+             </div>
+
+            <div class="flex-container">
                 <div class="form-group">
                     <label for="costFactor">Cost of Carbon ($/tonne)</label>
                     <input type="number" id="costFactor" value="30" step="0.1" min="0">
                 </div>
+                 <!-- Empty div for layout balance if needed, or add another factor -->
+                 <div></div>
             </div>
-            
+
+
             <button id="resetBtn" class="secondary">Reset Assumptions</button>
         </div>
     </div>
-    
+
     <!-- Results Section -->
     <div id="resultsContainer" class="results hidden">
         <h2>Results</h2>
-        
+
         <div class="container">
             <div class="card">
+                <p><strong>Route:</strong> <span id="fromAirportCode"></span> to <span id="toAirportCode"></span></p>
                 <p><strong>Distance:</strong> <span id="distanceResult">0</span> km</p>
                 <p><strong>Swiss Airtainer Emissions:</strong> <span id="swissEmissionsResult">0</span> kg CO2</p>
                 <p><strong>Competitor Emissions:</strong> <span id="competitorEmissionsResult">0</span> kg CO2</p>
                 <p class="green-text">Emissions Savings: <span id="savingsResult">0</span> kg CO2</p>
-                
+                <!-- ADDED: Fuel Saved Result Display -->
+                <p class="blue-text">Fuel Saved: <span id="fuelSavedResult">0</span> kg</p>
+
+
                 <h3>Environmental Equivalents</h3>
                 <p><strong>Trees needed to absorb this CO2:</strong> <span id="treeEquivalentResult">0</span></p>
                 <p><strong>Equivalent to removing cars:</strong> <span id="carEquivalentResult">0</span></p>
-                <p><strong>Cost savings:</strong> $<span id="costSavingsResult">0</span></p>
+                <p><strong>Cost savings (carbon):</strong> $<span id="costSavingsResult">0</span></p>
             </div>
-            
+
             <div class="card">
                 <h3>Emissions Comparison</h3>
                 <div class="chart-container">
@@ -203,16 +230,10 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="card" style="margin-top: 20px;">
-            <h3>Flight Route</h3>
-            <div class="map-placeholder">
-                <p>This is where an interactive map would go in a full implementation,
-                showing the route between <span id="fromAirportCode"></span> and <span id="toAirportCode"></span>.</p>
-                <p style="font-size: 14px; color: #718096; margin-top: 10px;">
-                    In a complete implementation, you would integrate with a mapping library like Leaflet or Google Maps.
-                </p>
-            </div>
+            <h3>Flight Route Visualization</h3>
+            <div id="globeViz"></div>
         </div>
     </div>
 
@@ -220,20 +241,22 @@
         // Airport data
         const airports = [
             { iata: 'ZRH', name: 'Zurich Airport', lat: 47.4647, lng: 8.5492 },
-            { iata: 'JFK', name: 'John F. Kennedy International Airport', lat: 40.6413, lng: -73.7781 },
+            { iata: 'JFK', name: 'John F. Kennedy Intl.', lat: 40.6413, lng: -73.7781 },
             { iata: 'LHR', name: 'London Heathrow', lat: 51.4700, lng: -0.4543 },
             { iata: 'CDG', name: 'Paris Charles de Gaulle', lat: 49.0097, lng: 2.5479 },
             { iata: 'SIN', name: 'Singapore Changi', lat: 1.3644, lng: 103.9915 },
-            { iata: 'HKG', name: 'Hong Kong International', lat: 22.3080, lng: 113.9185 },
-            { iata: 'DXB', name: 'Dubai International', lat: 25.2532, lng: 55.3657 },
-            { iata: 'LAX', name: 'Los Angeles International', lat: 33.9416, lng: -118.4085 },
-            { iata: 'PEK', name: 'Beijing Capital International', lat: 40.0799, lng: 116.6031 },
+            { iata: 'HKG', name: 'Hong Kong Intl.', lat: 22.3080, lng: 113.9185 },
+            { iata: 'DXB', name: 'Dubai Intl.', lat: 25.2532, lng: 55.3657 },
+            { iata: 'LAX', name: 'Los Angeles Intl.', lat: 33.9416, lng: -118.4085 },
+            { iata: 'PEK', name: 'Beijing Capital Intl.', lat: 40.0799, lng: 116.6031 },
             { iata: 'FRA', name: 'Frankfurt Airport', lat: 50.0379, lng: 8.5622 }
         ];
 
         // Chart instance
         let emissionsChart;
-        
+        // Globe instance
+        let myGlobe;
+
         // DOM Elements
         const fromAirportSelect = document.getElementById('fromAirport');
         const toAirportSelect = document.getElementById('toAirport');
@@ -245,122 +268,146 @@
         const treeFactorInput = document.getElementById('treeFactor');
         const carFactorInput = document.getElementById('carFactor');
         const costFactorInput = document.getElementById('costFactor');
+        // ADDED: Fuel burn factor input
+        const fuelBurnFactorInput = document.getElementById('fuelBurnFactor');
         const calculateBtn = document.getElementById('calculateBtn');
         const resetBtn = document.getElementById('resetBtn');
         const errorMsg = document.getElementById('errorMsg');
         const resultsContainer = document.getElementById('resultsContainer');
-        
+        // ADDED: Fuel saved result element
+        const fuelSavedResultEl = document.getElementById('fuelSavedResult');
+
+
         // Populate airport dropdowns
         function populateAirports() {
-            airports.forEach(airport => {
+            airports.sort((a, b) => a.iata.localeCompare(b.iata)).forEach(airport => {
                 const option1 = document.createElement('option');
                 option1.value = airport.iata;
                 option1.textContent = `${airport.iata} - ${airport.name}`;
                 fromAirportSelect.appendChild(option1);
-                
+
                 const option2 = document.createElement('option');
                 option2.value = airport.iata;
                 option2.textContent = `${airport.iata} - ${airport.name}`;
                 toAirportSelect.appendChild(option2);
             });
         }
-        
+
         // Calculate distance using Haversine formula
         function calculateDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; // Radius of the Earth in km
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = 
+            const a =
                 Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                 Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c; // Distance in km
         }
-        
-        // Calculate emissions
+
+        // Calculate emissions and update display
         function calculateEmissions() {
+            // Get all values
             const fromAirportCode = fromAirportSelect.value;
             const toAirportCode = toAirportSelect.value;
             const numContainers = parseInt(numContainersInput.value) || 150;
-            const cargoWeight = parseInt(cargoWeightInput.value) || 1000;
-            const swissWeight = parseInt(swissWeightInput.value) || 590;
-            const competitorWeight = parseInt(competitorWeightInput.value) || 650;
-            const emissionFactor = parseFloat(emissionFactorInput.value) || 0.6;
-            const treeFactor = parseFloat(treeFactorInput.value) || 25;
-            const carFactor = parseFloat(carFactorInput.value) || 4.6;
-            const costFactor = parseFloat(costFactorInput.value) || 30;
-            
+            const cargoWeight = parseInt(cargoWeightInput.value) || 1000; // kg per container
+            const swissWeight = parseInt(swissWeightInput.value) || 590; // kg per container
+            const competitorWeight = parseInt(competitorWeightInput.value) || 650; // kg per container
+            const emissionFactor = parseFloat(emissionFactorInput.value) || 0.6; // kg CO2 / tonne-km
+            const treeFactor = parseFloat(treeFactorInput.value) || 25; // kg CO2 / tree
+            const carFactor = parseFloat(carFactorInput.value) || 4.6; // tonnes CO2 / car
+            const costFactor = parseFloat(costFactorInput.value) || 30; // $ / tonne CO2
+            const fuelBurnFactor = parseFloat(fuelBurnFactorInput.value) || 0.04; // kg fuel / tonne-km
+
             // Validate inputs
             if (!fromAirportCode || !toAirportCode) {
                 errorMsg.textContent = 'Please select both departure and arrival airports';
                 errorMsg.classList.remove('hidden');
+                resultsContainer.classList.add('hidden');
                 return;
             }
-            
+            if (fromAirportCode === toAirportCode) {
+                 errorMsg.textContent = 'Departure and arrival airports cannot be the same';
+                errorMsg.classList.remove('hidden');
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            errorMsg.classList.add('hidden');
+
             const fromAirport = airports.find(a => a.iata === fromAirportCode);
             const toAirport = airports.find(a => a.iata === toAirportCode);
-            
+
             // Calculate distance
             const distance = calculateDistance(
                 fromAirport.lat, fromAirport.lng,
                 toAirport.lat, toAirport.lng
             );
-            
-            // Calculate emissions
-            const swissEmissions = numContainers * (swissWeight + cargoWeight) * distance * emissionFactor / 1000;
-            const competitorEmissions = numContainers * (competitorWeight + cargoWeight) * distance * emissionFactor / 1000;
-            const savings = competitorEmissions - swissEmissions;
-            
+
+            // Calculate total weights in TONNES
+            const totalWeightSwissTonnes = numContainers * (swissWeight + cargoWeight) / 1000;
+            const totalWeightCompetitorTonnes = numContainers * (competitorWeight + cargoWeight) / 1000;
+
+            // Calculate CO2 emissions (kg)
+            const swissEmissions = totalWeightSwissTonnes * distance * emissionFactor;
+            const competitorEmissions = totalWeightCompetitorTonnes * distance * emissionFactor;
+            const savings = competitorEmissions - swissEmissions; // kg CO2
+
+            // ADDED: Calculate Fuel Burn (kg)
+            const swissFuelBurn = totalWeightSwissTonnes * distance * fuelBurnFactor;
+            const competitorFuelBurn = totalWeightCompetitorTonnes * distance * fuelBurnFactor;
+            const fuelSaved = competitorFuelBurn - swissFuelBurn; // kg fuel
+
             // Calculate equivalents
-            const treeEquivalent = Math.round(savings / treeFactor);
-            const carEquivalent = (savings / 1000) / carFactor;
-            const costSavings = (savings / 1000) * costFactor;
-            
-            // Update results
-            document.getElementById('distanceResult').textContent = Math.round(distance);
-            document.getElementById('swissEmissionsResult').textContent = (Math.round(swissEmissions * 100) / 100).toFixed(2);
-            document.getElementById('competitorEmissionsResult').textContent = (Math.round(competitorEmissions * 100) / 100).toFixed(2);
-            document.getElementById('savingsResult').textContent = (Math.round(savings * 100) / 100).toFixed(2);
-            document.getElementById('treeEquivalentResult').textContent = treeEquivalent;
-            document.getElementById('carEquivalentResult').textContent = (Math.round(carEquivalent * 100) / 100).toFixed(2);
-            document.getElementById('costSavingsResult').textContent = (Math.round(costSavings * 100) / 100).toFixed(2);
-            
-            // Update map placeholder
+            const treeEquivalent = savings > 0 ? Math.round(savings / treeFactor) : 0;
+            const carEquivalent = savings > 0 ? (savings / 1000) / carFactor : 0; // savings in tonnes / car factor
+            const costSavings = savings > 0 ? (savings / 1000) * costFactor : 0; // savings in tonnes * cost factor
+
+            // Update results text
             document.getElementById('fromAirportCode').textContent = fromAirportCode;
             document.getElementById('toAirportCode').textContent = toAirportCode;
-            
-            // Show results
+            document.getElementById('distanceResult').textContent = Math.round(distance);
+            document.getElementById('swissEmissionsResult').textContent = swissEmissions.toFixed(2);
+            document.getElementById('competitorEmissionsResult').textContent = competitorEmissions.toFixed(2);
+            document.getElementById('savingsResult').textContent = savings.toFixed(2);
+            // ADDED: Update fuel saved display
+            fuelSavedResultEl.textContent = fuelSaved.toFixed(2);
+
+            document.getElementById('treeEquivalentResult').textContent = treeEquivalent;
+            document.getElementById('carEquivalentResult').textContent = carEquivalent.toFixed(2);
+            document.getElementById('costSavingsResult').textContent = costSavings.toFixed(2);
+
+            // Show results section
             resultsContainer.classList.remove('hidden');
-            errorMsg.classList.add('hidden');
-            
-            // Update chart
+
+            // Update chart and globe
             updateChart(swissEmissions, competitorEmissions);
+            updateGlobe(fromAirport, toAirport);
         }
-        
+
         // Update or create the chart
         function updateChart(swissEmissions, competitorEmissions) {
             const ctx = document.getElementById('emissionsChart').getContext('2d');
-            
-            // Destroy previous chart if it exists
+
             if (emissionsChart) {
                 emissionsChart.destroy();
             }
-            
-            // Create new chart
+
             emissionsChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Swiss Airtainer', 'Competitors'],
+                    labels: ['Swiss Airtainer', 'Competitor'],
                     datasets: [{
                         label: 'CO2 Emissions (kg)',
                         data: [
-                            Math.round(swissEmissions * 100) / 100,
-                            Math.round(competitorEmissions * 100) / 100
+                            swissEmissions.toFixed(2),
+                            competitorEmissions.toFixed(2)
                         ],
                         backgroundColor: [
-                            'rgba(54, 162, 235, 0.7)',
-                            'rgba(255, 99, 132, 0.7)'
+                            'rgba(54, 162, 235, 0.7)', // Blue
+                            'rgba(255, 99, 132, 0.7)'  // Red
                         ],
                         borderColor: [
                             'rgba(54, 162, 235, 1)',
@@ -380,11 +427,97 @@
                                 text: 'CO2 Emissions (kg)'
                             }
                         }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
                     }
                 }
             });
         }
-        
+
+        // Initialize or update the globe
+        function updateGlobe(fromAirport, toAirport) {
+            const globeContainer = document.getElementById('globeViz');
+
+            let routeArc = [];
+            let airportPoints = [];
+
+            if (fromAirport && toAirport) {
+                 routeArc = [{
+                    startLat: fromAirport.lat,
+                    startLng: fromAirport.lng,
+                    endLat: toAirport.lat,
+                    endLng: toAirport.lng,
+                    color: 'rgba(255, 0, 0, 0.7)', // Red route
+                    name: `${fromAirport.iata} -> ${toAirport.iata}`
+                }];
+
+                airportPoints = [fromAirport, toAirport].map(ap => ({
+                    ...ap,
+                    size: 0.3, // Slightly smaller points
+                    color: 'rgba(0, 0, 0, 0.7)' // Black points for contrast on map
+                }));
+            }
+
+            if (!myGlobe) {
+                // Initialize globe only once
+                myGlobe = Globe()
+                    (globeContainer)
+                    // MODIFIED: Texture with blue oceans and some green land
+                    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+                    // Removed bump map and background image
+                    .showAtmosphere(true)
+                    .atmosphereColor('lightblue')
+                    .atmosphereAltitude(0.2) // Adjusted atmosphere thickness
+                    .arcsData(routeArc)
+                    .arcColor('color')
+                    .arcDashLength(0.5) // Adjusted dash pattern
+                    .arcDashGap(0.2)
+                    .arcDashInitialGap(() => Math.random() * 0.8) // Randomized start
+                    .arcDashAnimateTime(4000) // Kept slower animation
+                    .arcStroke(0.4) // Slightly thinner arc
+                    // MODIFIED: Adjusted arc altitude to prevent going under surface
+                    .arcAltitude(0.12) // Increased slightly from 0.08/0.1
+                    .pointsData(airportPoints)
+                    .pointLabel('name')
+                    .pointLat('lat')
+                    .pointLng('lng')
+                    .pointRadius('size')
+                    .pointAltitude(0.005) // Points closer to surface
+                    .pointColor('color')
+                    .pointResolution(8); // Lower resolution points (simpler)
+
+                // Configure controls
+                myGlobe.controls().autoRotate = true;
+                myGlobe.controls().autoRotateSpeed = 0.2; // Slightly slower rotation
+                myGlobe.controls().enableZoom = true;
+                myGlobe.controls().minDistance = 200; // Prevent zooming too close
+                myGlobe.controls().maxDistance = 600; // Prevent zooming too far
+
+                // Adjust initial view
+                myGlobe.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
+
+            } else {
+                // Update existing globe data
+                myGlobe.arcsData(routeArc).pointsData(airportPoints);
+            }
+
+            // Point camera towards the middle of the arc after update, only if airports are valid
+            if (fromAirport && toAirport) {
+                 const midLat = (fromAirport.lat + toAirport.lat) / 2;
+                 let midLng = (fromAirport.lng + toAirport.lng) / 2;
+
+                 if (Math.abs(fromAirport.lng - toAirport.lng) > 180) {
+                     midLng += 180;
+                     if (midLng > 180) midLng -= 360;
+                 }
+                 // Keep the altitude relatively high to see the arc well
+                 myGlobe.pointOfView({ lat: midLat, lng: midLng, altitude: 1.8 }, 1500);
+            }
+        }
+
         // Reset assumptions to defaults
         function resetAssumptions() {
             swissWeightInput.value = 590;
@@ -393,13 +526,21 @@
             treeFactorInput.value = 25;
             carFactorInput.value = 4.6;
             costFactorInput.value = 30;
+            // ADDED: Reset fuel burn factor
+            fuelBurnFactorInput.value = 0.04;
+
+            if (!resultsContainer.classList.contains('hidden')) {
+                calculateEmissions();
+            }
         }
-        
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             populateAirports();
             calculateBtn.addEventListener('click', calculateEmissions);
             resetBtn.addEventListener('click', resetAssumptions);
+            // Initialize the globe visualization on load
+            updateGlobe(null, null);
         });
     </script>
 </body>
