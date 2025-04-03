@@ -465,6 +465,9 @@
                 // Initialize globe only once
                 myGlobe = Globe()
                     (globeContainer)
+                    .backgroundColor('lightgrey')
+                    .width(350)
+                    .height(350)
                     // MODIFIED: Texture with blue oceans and some green land
                     .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
                     // Removed bump map and background image
