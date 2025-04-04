@@ -88,6 +88,10 @@
             color: #3182ce;
             font-weight: bold;
         }
+        .yellow-text {
+            color: #d69e2e;
+            font-weight: bold;
+        }
         .flex-container {
             display: flex;
             gap: 10px;
@@ -200,20 +204,23 @@
                 </div>
                 <div class="flex-container">
                     <div class="form-group">
-                        <label for="treeFactor">Tree Absorption (kg CO2/tree)</label>
-                        <input type="number" id="treeFactor" value="25" step="0.1" min="0.1">
+                        <label for="fuelCostFactor">Fuel Cost ($/kg)</label>
+                        <input type="number" id="fuelCostFactor" value="1.50" step="0.01" min="0">
                     </div>
                     <div class="form-group">
-                        <label for="carFactor">Car Emissions (tonnes CO2/car)</label>
-                        <input type="number" id="carFactor" value="4.6" step="0.1" min="0.1">
+                        <label for="treeFactor">Tree Absorption (kg CO2/tree)</label>
+                        <input type="number" id="treeFactor" value="25" step="0.1" min="0.1">
                     </div>
                 </div>
                 <div class="flex-container">
                     <div class="form-group">
+                        <label for="carFactor">Car Emissions (tonnes CO2/car)</label>
+                        <input type="number" id="carFactor" value="4.6" step="0.1" min="0.1">
+                    </div>
+                    <div class="form-group">
                         <label for="costFactor">Cost of Carbon ($/tonne)</label>
                         <input type="number" id="costFactor" value="30" step="0.1" min="0">
                     </div>
-                    <div></div>
                 </div>
                 <button id="resetBtn" class="secondary">Reset Assumptions</button>
             </details>
@@ -235,6 +242,7 @@
                 <p><strong>Competitor Emissions:</strong> <span id="competitorEmissionsResult">0</span> kg CO2</p>
                 <p class="green-text">Emissions Savings: <span id="savingsResult">0</span> kg CO2</p>
                 <p class="blue-text">Fuel Saved: <span id="fuelSavedResult">0</span> kg</p>
+                <p class="yellow-text">Fuel Cost Savings: $<span id="fuelCostSavingsResult">0</span></p>
                 <h3>Environmental Equivalents</h3>
                 <p><strong>Trees needed to absorb this CO2:</strong> <span id="treeEquivalentResult">0</span></p>
                 <p><strong>Equivalent to removing cars:</strong> <span id="carEquivalentResult">0</span></p>
@@ -278,10 +286,11 @@
         const swissMaxVolumeInput = document.getElementById('swissMaxVolume');
         const competitorMaxVolumeInput = document.getElementById('competitorMaxVolume');
         const emissionFactorInput = document.getElementById('emissionFactor');
+        const fuelBurnFactorInput = document.getElementById('fuelBurnFactor');
+        const fuelCostFactorInput = document.getElementById('fuelCostFactor');
         const treeFactorInput = document.getElementById('treeFactor');
         const carFactorInput = document.getElementById('carFactor');
         const costFactorInput = document.getElementById('costFactor');
-        const fuelBurnFactorInput = document.getElementById('fuelBurnFactor');
         const calculateBtn = document.getElementById('calculateBtn');
         const resetBtn = document.getElementById('resetBtn');
         const errorMsg = document.getElementById('errorMsg');
@@ -291,6 +300,7 @@
         const competitorContainersPerShipmentEl = document.getElementById('competitorContainersPerShipment');
         const totalSwissContainersEl = document.getElementById('totalSwissContainers');
         const totalCompetitorContainersEl = document.getElementById('totalCompetitorContainers');
+        const fuelCostSavingsResultEl = document.getElementById('fuelCostSavingsResult');
 
         // Populate airport dropdowns and set default route
         function populateAirports() {
@@ -333,10 +343,11 @@
             const swissMaxVolume = parseFloat(swissMaxVolumeInput.value) || 2.40;
             const competitorMaxVolume = parseFloat(competitorMaxVolumeInput.value) || 2.30;
             const emissionFactor = parseFloat(emissionFactorInput.value) || 0.25;
+            const fuelBurnFactor = parseFloat(fuelBurnFactorInput.value) || 0.015;
+            const fuelCostFactor = parseFloat(fuelCostFactorInput.value) || 1.50;
             const treeFactor = parseFloat(treeFactorInput.value) || 25;
             const carFactor = parseFloat(carFactorInput.value) || 4.6;
             const costFactor = parseFloat(costFactorInput.value) || 30;
-            const fuelBurnFactor = parseFloat(fuelBurnFactorInput.value) || 0.015;
 
             if (!fromAirportCode || !toAirportCode) {
                 errorMsg.textContent = 'Please select both departure and arrival airports';
@@ -375,6 +386,8 @@
             const competitorFuelBurn = totalCompetitorContainers * totalVolume * distance * fuelBurnFactor * (competitorWeight / 390) / numShipments;
             const fuelSaved = competitorFuelBurn - swissFuelBurn;
 
+            const fuelCostSavings = fuelSaved > 0 ? fuelSaved * fuelCostFactor : 0;
+
             const treeEquivalent = savings > 0 ? Math.round(savings / treeFactor) : 0;
             const carEquivalent = savings > 0 ? (savings / 1000) / carFactor : 0;
             const costSavings = savings > 0 ? (savings / 1000) * costFactor : 0;
@@ -390,6 +403,7 @@
             document.getElementById('competitorEmissionsResult').textContent = competitorEmissions.toFixed(2);
             document.getElementById('savingsResult').textContent = savings.toFixed(2);
             fuelSavedResultEl.textContent = fuelSaved.toFixed(2);
+            fuelCostSavingsResultEl.textContent = fuelCostSavings.toFixed(2);
             document.getElementById('treeEquivalentResult').textContent = treeEquivalent;
             document.getElementById('carEquivalentResult').textContent = carEquivalent.toFixed(2);
             document.getElementById('costSavingsResult').textContent = costSavings.toFixed(2);
@@ -500,10 +514,11 @@
             swissMaxVolumeInput.value = 2.40;
             competitorMaxVolumeInput.value = 2.30;
             emissionFactorInput.value = 0.25;
+            fuelBurnFactorInput.value = 0.015;
+            fuelCostFactorInput.value = 1.50;
             treeFactorInput.value = 25;
             carFactorInput.value = 4.6;
             costFactorInput.value = 30;
-            fuelBurnFactorInput.value = 0.015;
             numShipmentsInput.value = 10;
             totalVolumeInput.value = 20;
             if (!resultsContainer.classList.contains('hidden')) calculateEmissions();
