@@ -30,7 +30,7 @@
                 grid-template-columns: 1fr 1fr;
             }
             .main-container {
-                grid-template-columns: 1fr 350px; /* Form on left, globe on right */
+                grid-template-columns: 1fr 350px;
             }
         }
         .card {
@@ -142,13 +142,13 @@
             </div>
 
             <div class="form-group">
-                <label for="numContainers">Number of Containers</label>
-                <input type="number" id="numContainers" value="150" min="1">
+                <label for="numShipments">Number of Shipments</label>
+                <input type="number" id="numShipments" value="10" min="1">
             </div>
 
             <div class="form-group">
-                <label for="cargoWeight">Cargo Weight per Container (kg)</label>
-                <input type="number" id="cargoWeight" value="1000" min="0">
+                <label for="totalVolume">Total Volume Load of Shipment (m³)</label>
+                <input type="number" id="totalVolume" value="20" step="0.01" min="0">
             </div>
 
             <button id="calculateBtn">Calculate Emissions & Show Route</button>
@@ -171,7 +171,7 @@
                 <div class="flex-container">
                     <div class="form-group">
                         <label for="swissWeight">Swiss Airtainer Weight (kg)</label>
-                        <input type="number" id="swissWeight" value="590" min="0">
+                        <input type="number" id="swissWeight" value="390" min="0">
                     </div>
                     <div class="form-group">
                         <label for="competitorWeight">Competitor Weight (kg)</label>
@@ -180,12 +180,22 @@
                 </div>
                 <div class="flex-container">
                     <div class="form-group">
-                        <label for="emissionFactor">Emission Factor (kg CO2/tonne-km)</label>
-                        <input type="number" id="emissionFactor" value="0.6" step="0.01" min="0">
+                        <label for="swissMaxVolume">Swiss Airtainer Max Volume (m³)</label>
+                        <input type="number" id="swissMaxVolume" value="2.40" step="0.01" min="0">
                     </div>
                     <div class="form-group">
-                        <label for="fuelBurnFactor">Fuel Burn (kg fuel / tonne-km)</label>
-                        <input type="number" id="fuelBurnFactor" value="0.04" step="0.001" min="0">
+                        <label for="competitorMaxVolume">Competitor Max Volume (m³)</label>
+                        <input type="number" id="competitorMaxVolume" value="2.30" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="flex-container">
+                    <div class="form-group">
+                        <label for="emissionFactor">Emission Factor (kg CO2/m³-km)</label>
+                        <input type="number" id="emissionFactor" value="0.25" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="fuelBurnFactor">Fuel Burn (kg fuel/m³-km)</label>
+                        <input type="number" id="fuelBurnFactor" value="0.015" step="0.001" min="0">
                     </div>
                 </div>
                 <div class="flex-container">
@@ -217,11 +227,13 @@
             <div class="card">
                 <p><strong>Route:</strong> <span id="fromAirportCode"></span> to <span id="toAirportCode"></span></p>
                 <p><strong>Distance:</strong> <span id="distanceResult">0</span> km</p>
+                <p><strong>Containers per Shipment (Swiss):</strong> <span id="swissContainersPerShipment">0</span></p>
+                <p><strong>Containers per Shipment (Competitor):</strong> <span id="competitorContainersPerShipment">0</span></p>
+                <p><strong>Total Containers (Swiss):</strong> <span id="totalSwissContainers">0</span></p>
+                <p><strong>Total Containers (Competitor):</strong> <span id="totalCompetitorContainers">0</span></p>
                 <p><strong>Swiss Airtainer Emissions:</strong> <span id="swissEmissionsResult">0</span> kg CO2</p>
                 <p><strong>Competitor Emissions:</strong> <span id="competitorEmissionsResult">0</span> kg CO2</p>
-                <p class="green-text수록
-
-">Emissions Savings: <span id="savingsResult">0</span> kg CO2</p>
+                <p class="green-text">Emissions Savings: <span id="savingsResult">0</span> kg CO2</p>
                 <p class="blue-text">Fuel Saved: <span id="fuelSavedResult">0</span> kg</p>
                 <h3>Environmental Equivalents</h3>
                 <p><strong>Trees needed to absorb this CO2:</strong> <span id="treeEquivalentResult">0</span></p>
@@ -259,10 +271,12 @@
         // DOM Elements
         const fromAirportSelect = document.getElementById('fromAirport');
         const toAirportSelect = document.getElementById('toAirport');
-        const numContainersInput = document.getElementById('numContainers');
-        const cargoWeightInput = document.getElementById('cargoWeight');
+        const numShipmentsInput = document.getElementById('numShipments');
+        const totalVolumeInput = document.getElementById('totalVolume');
         const swissWeightInput = document.getElementById('swissWeight');
         const competitorWeightInput = document.getElementById('competitorWeight');
+        const swissMaxVolumeInput = document.getElementById('swissMaxVolume');
+        const competitorMaxVolumeInput = document.getElementById('competitorMaxVolume');
         const emissionFactorInput = document.getElementById('emissionFactor');
         const treeFactorInput = document.getElementById('treeFactor');
         const carFactorInput = document.getElementById('carFactor');
@@ -273,6 +287,10 @@
         const errorMsg = document.getElementById('errorMsg');
         const resultsContainer = document.getElementById('resultsContainer');
         const fuelSavedResultEl = document.getElementById('fuelSavedResult');
+        const swissContainersPerShipmentEl = document.getElementById('swissContainersPerShipment');
+        const competitorContainersPerShipmentEl = document.getElementById('competitorContainersPerShipment');
+        const totalSwissContainersEl = document.getElementById('totalSwissContainers');
+        const totalCompetitorContainersEl = document.getElementById('totalCompetitorContainers');
 
         // Populate airport dropdowns and set default route
         function populateAirports() {
@@ -287,7 +305,6 @@
                 option2.textContent = `${airport.iata} - ${airport.name}`;
                 toAirportSelect.appendChild(option2);
             });
-            // Set default route: ZRH to JFK
             fromAirportSelect.value = 'ZRH';
             toAirportSelect.value = 'JFK';
         }
@@ -309,15 +326,17 @@
         function calculateEmissions() {
             const fromAirportCode = fromAirportSelect.value;
             const toAirportCode = toAirportSelect.value;
-            const numContainers = parseInt(numContainersInput.value) || 150;
-            const cargoWeight = parseInt(cargoWeightInput.value) || 1000;
-            const swissWeight = parseInt(swissWeightInput.value) || 590;
+            const numShipments = parseInt(numShipmentsInput.value) || 10;
+            const totalVolume = parseFloat(totalVolumeInput.value) || 20;
+            const swissWeight = parseInt(swissWeightInput.value) || 390;
             const competitorWeight = parseInt(competitorWeightInput.value) || 650;
-            const emissionFactor = parseFloat(emissionFactorInput.value) || 0.6;
+            const swissMaxVolume = parseFloat(swissMaxVolumeInput.value) || 2.40;
+            const competitorMaxVolume = parseFloat(competitorMaxVolumeInput.value) || 2.30;
+            const emissionFactor = parseFloat(emissionFactorInput.value) || 0.25;
             const treeFactor = parseFloat(treeFactorInput.value) || 25;
             const carFactor = parseFloat(carFactorInput.value) || 4.6;
             const costFactor = parseFloat(costFactorInput.value) || 30;
-            const fuelBurnFactor = parseFloat(fuelBurnFactorInput.value) || 0.04;
+            const fuelBurnFactor = parseFloat(fuelBurnFactorInput.value) || 0.015;
 
             if (!fromAirportCode || !toAirportCode) {
                 errorMsg.textContent = 'Please select both departure and arrival airports';
@@ -339,15 +358,21 @@
 
             const distance = calculateDistance(fromAirport.lat, fromAirport.lng, toAirport.lat, toAirport.lng);
 
-            const totalWeightSwissTonnes = numContainers * (swissWeight + cargoWeight) / 1000;
-            const totalWeightCompetitorTonnes = numContainers * (competitorWeight + cargoWeight) / 1000;
+            // Calculate minimum containers per shipment
+            const swissContainersPerShipment = Math.ceil(totalVolume / swissMaxVolume);
+            const competitorContainersPerShipment = Math.ceil(totalVolume / competitorMaxVolume);
 
-            const swissEmissions = totalWeightSwissTonnes * distance * emissionFactor;
-            const competitorEmissions = totalWeightCompetitorTonnes * distance * emissionFactor;
+            // Total containers for all shipments
+            const totalSwissContainers = swissContainersPerShipment * numShipments;
+            const totalCompetitorContainers = competitorContainersPerShipment * numShipments;
+
+            // Volume-based emissions adjusted by container weight
+            const swissEmissions = totalSwissContainers * totalVolume * distance * emissionFactor * (swissWeight / 390) / numShipments;
+            const competitorEmissions = totalCompetitorContainers * totalVolume * distance * emissionFactor * (competitorWeight / 390) / numShipments;
             const savings = competitorEmissions - swissEmissions;
 
-            const swissFuelBurn = totalWeightSwissTonnes * distance * fuelBurnFactor;
-            const competitorFuelBurn = totalWeightCompetitorTonnes * distance * fuelBurnFactor;
+            const swissFuelBurn = totalSwissContainers * totalVolume * distance * fuelBurnFactor * (swissWeight / 390) / numShipments;
+            const competitorFuelBurn = totalCompetitorContainers * totalVolume * distance * fuelBurnFactor * (competitorWeight / 390) / numShipments;
             const fuelSaved = competitorFuelBurn - swissFuelBurn;
 
             const treeEquivalent = savings > 0 ? Math.round(savings / treeFactor) : 0;
@@ -357,6 +382,10 @@
             document.getElementById('fromAirportCode').textContent = fromAirportCode;
             document.getElementById('toAirportCode').textContent = toAirportCode;
             document.getElementById('distanceResult').textContent = Math.round(distance);
+            swissContainersPerShipmentEl.textContent = swissContainersPerShipment;
+            competitorContainersPerShipmentEl.textContent = competitorContainersPerShipment;
+            totalSwissContainersEl.textContent = totalSwissContainers;
+            totalCompetitorContainersEl.textContent = totalCompetitorContainers;
             document.getElementById('swissEmissionsResult').textContent = swissEmissions.toFixed(2);
             document.getElementById('competitorEmissionsResult').textContent = competitorEmissions.toFixed(2);
             document.getElementById('savingsResult').textContent = savings.toFixed(2);
@@ -466,20 +495,24 @@
 
         // Reset assumptions to defaults
         function resetAssumptions() {
-            swissWeightInput.value = 590;
+            swissWeightInput.value = 390;
             competitorWeightInput.value = 650;
-            emissionFactorInput.value = 0.6;
+            swissMaxVolumeInput.value = 2.40;
+            competitorMaxVolumeInput.value = 2.30;
+            emissionFactorInput.value = 0.25;
             treeFactorInput.value = 25;
             carFactorInput.value = 4.6;
             costFactorInput.value = 30;
-            fuelBurnFactorInput.value = 0.04;
+            fuelBurnFactorInput.value = 0.015;
+            numShipmentsInput.value = 10;
+            totalVolumeInput.value = 20;
             if (!resultsContainer.classList.contains('hidden')) calculateEmissions();
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             populateAirports();
-            updateGlobe(null, null); // Initialize globe without route
+            updateGlobe(null, null);
             calculateBtn.addEventListener('click', calculateEmissions);
             resetBtn.addEventListener('click', resetAssumptions);
         });
