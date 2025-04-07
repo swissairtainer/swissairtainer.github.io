@@ -1,0 +1,406 @@
+<div id="airFreightCalculator">
+  <style scoped>
+    #airFreightCalculator h4 { color: #2c5282; text-align: center; margin: 0 0 20px; }
+    #airFreightCalculator .main-container { 
+      display: grid; 
+      grid-template-columns: 1fr; 
+      gap: 10px; /* Reduced gap from 20px to 10px */
+      margin: 0 auto; /* Center the container */
+      width: fit-content; /* Make container only as wide as needed */
+    }
+    @media (min-width: 768px) { 
+      #airFreightCalculator .main-container { 
+        grid-template-columns: 500px 350px; /* Fixed width columns */
+        gap: 5px; /* Even smaller gap on desktop */
+      }
+      #airFreightCalculator .container { grid-template-columns: 1fr 1fr; }
+    }
+    #airFreightCalculator .container { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    #airFreightCalculator .card { 
+      background: #f7f7f7; 
+      border-radius: 8px; 
+      padding: 15px; /* Reduced padding from 20px to 15px */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 0; /* Remove any default margins */
+    }
+    /* Route information card styling */
+    #airFreightCalculator .route-info-card { 
+      max-width: 500px; 
+      width: 100%;
+    }
+    /* Align all cards */
+    #airFreightCalculator .assumptions-card,
+    #airFreightCalculator .results-card {
+      max-width: 500px;
+      width: 100%;
+    }
+    #airFreightCalculator .form-group { margin-bottom: 15px; }
+    #airFreightCalculator label { display: block; font-weight: bold; margin-bottom: 5px; }
+    #airFreightCalculator input, #airFreightCalculator select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    #airFreightCalculator button { background: #3182ce; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+    #airFreightCalculator button:hover { background: #2c5282; }
+    #airFreightCalculator .secondary { background: #718096; }
+    #airFreightCalculator .secondary:hover { background: #4a5568; }
+    #airFreightCalculator .results { margin-top: 30px; }
+    #airFreightCalculator .chart-container { height: 280px; margin-top: 20px; }
+    #airFreightCalculator .green-text { color: #38a169; font-weight: bold; }
+    #airFreightCalculator .blue-text { color: #3182ce; font-weight: bold; }
+    #airFreightCalculator .yellow-text { color: #d69e2e; font-weight: bold; }
+    #airFreightCalculator .flex-container { display: flex; gap: 10px; }
+    #airFreightCalculator .flex-container > div { flex: 1; }
+    #airFreightCalculator .hidden { display: none; }
+    #airFreightCalculator #globeViz { width: 100%; height: 350px; border-radius: 4px; background: #ffffff; cursor: grab; position: relative; border: 1px solid #ccc; }
+    #airFreightCalculator #globeViz:active { cursor: grabbing; }
+    #airFreightCalculator details { margin-bottom: 15px; }
+    #airFreightCalculator summary { 
+      cursor: pointer; 
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 5px;
+      border-radius: 4px;
+      background: #f0f0f0;
+    }
+    #airFreightCalculator summary:hover {
+      background: #e8e8e8;
+    }
+    #airFreightCalculator .toggle-icon {
+      transition: transform 0.3s ease;
+      font-size: 12px;
+    }
+    #airFreightCalculator details[open] .toggle-icon {
+      transform: rotate(180deg);
+    }
+    #airFreightCalculator .assumptions-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    @media (min-width: 768px) {
+      #airFreightCalculator .assumptions-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    #airFreightCalculator .select2-container { width: 100% !important; }
+    #airFreightCalculator h5 { margin-top: 0; margin-bottom: 15px; }
+    #airFreightCalculator .full-width-container {
+      width: 100%;
+      max-width: 860px; /* This is approximately 500px + 350px + 10px gap */
+      margin: 0 auto;
+    }
+
+    #airFreightCalculator .full-width-container .assumptions-card {
+      max-width: none;
+      width: 100%;
+    }
+
+    #airFreightCalculator .full-width-container .assumptions-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 767px) {
+      #airFreightCalculator .full-width-container .assumptions-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <h4>CO<sub>2</sub> Calculator</h4>
+  <div class="main-container">
+    <div class="card route-info-card">
+      <h5>Route Information</h5>
+      <div class="form-group">
+        <label for="fromAirport">From Airport (IATA code)</label>
+        <select id="fromAirport"><option value="">Select departure airport</option></select>
+      </div>
+      <div class="form-group">
+        <label for="toAirport">To Airport (IATA code)</label>
+        <select id="toAirport"><option value="">Select arrival airport</option></select>
+      </div>
+      <div class="form-group">
+        <label for="numShipments">Number of Shipments</label>
+        <input type="number" id="numShipments" value="10" min="1">
+      </div>
+      <div class="form-group">
+        <label for="totalVolume">Total Volume Load of Shipment (m³)</label>
+        <input type="number" id="totalVolume" value="20" step="0.01" min="0">
+      </div>
+      <button id="calculateBtn">Calculate Emissions</button>
+      <p id="errorMsg" class="hidden" style="color: red; margin-top: 10px;"></p>
+    </div>
+    <div class="card">
+      <div id="globeViz" style="border: none !important;"></div>
+    </div>
+  </div>
+
+  <div class="full-width-container" style="margin-top: 20px;">
+    <div class="card assumptions-card">
+      <details id="assumptionsDetails">
+        <summary>
+          <span class="summary-text">Assumptions</span>
+          <span class="toggle-icon">▼</span>
+        </summary>
+        <div class="assumptions-grid">
+          <div class="assumptions-column">
+            <div class="form-group"><label for="swissWeight">Swiss Airtainer Weight (kg)</label><input type="number" id="swissWeight" value="390" min="0"></div>
+            <div class="form-group"><label for="swissMaxVolume">Swiss Airtainer Max Volume (m³)</label><input type="number" id="swissMaxVolume" value="2.40" step="0.01" min="0"></div>
+            <div class="form-group"><label for="emissionFactor">Emission Factor (kg CO<sub>2</sub>/m³-km)</label><input type="number" id="emissionFactor" value="0.25" step="0.01" min="0"></div>
+            <div class="form-group"><label for="fuelCostFactor">Fuel Cost ($/kg)</label><input type="number" id="fuelCostFactor" value="1.50" step="0.01" min="0"></div>
+            <div class="form-group"><label for="carFactor">Car Emissions (tonnes CO<sub>2</sub>/car)</label><input type="number" id="carFactor" value="4.6" step="0.1" min="0.1"></div>
+          </div>
+          <div class="assumptions-column">
+            <div class="form-group"><label for="competitorWeight">Competitor Weight (kg)</label><input type="number" id="competitorWeight" value="650" min="0"></div>
+            <div class="form-group"><label for="competitorMaxVolume">Competitor Max Volume (m³)</label><input type="number" id="competitorMaxVolume" value="2.30" step="0.01" min="0"></div>
+            <div class="form-group"><label for="fuelBurnFactor">Fuel Burn (kg fuel/m³-km)</label><input type="number" id="fuelBurnFactor" value="0.015" step="0.001" min="0"></div>
+            <div class="form-group"><label for="treeFactor">Tree Absorption (kg CO<sub>2</sub>/tree)</label><input type="number" id="treeFactor" value="25" step="0.1" min="0.1"></div>
+            <div class="form-group"><label for="costFactor">Cost of Carbon ($/tonne)</label><input type="number" id="costFactor" value="30" step="0.1" min="0"></div>
+          </div>
+        </div>
+        <button id="resetBtn" class="secondary">Reset Assumptions</button>
+      </details>
+    </div>
+  </div>
+
+  <div id="resultsContainer" class="results hidden full-width-container" style="margin-top: 20px;">
+    <h5>Results</h5>
+    <div class="main-container">
+      <div class="card results-card">
+        <p><strong>Route:</strong> <span id="fromAirportCode"></span> to <span id="toAirportCode"></span></p>
+        <p><strong>Distance:</strong> <span id="distanceResult">0</span> km</p>
+        <p><strong>Containers per Shipment (SAT):</strong> <span id="swissContainersPerShipment">0</span></p>
+        <p><strong>Containers per Shipment (Competitor):</strong> <span id="competitorContainersPerShipment">0</span></p>
+        <p><strong>Total Containers (SAT):</strong> <span id="totalSwissContainers">0</span></p>
+        <p><strong>Total Containers (Competitor):</strong> <span id="totalCompetitorContainers">0</span></p>
+        <p><strong>Swiss Airtainer Emissions:</strong> <span id="swissEmissionsResult">0</span> kg  CO<sub>2</sub></p>
+        <p><strong>Competitor Emissions:</strong> <span id="competitorEmissionsResult">0</span> kg  CO<sub>2</sub></p>
+        <p class="green-text">Emissions Savings: <span id="savingsResult">0</span> kg  CO<sub>2</sub></p>
+        <p class="blue-text">Fuel Saved: <span id="fuelSavedResult">0</span> kg</p>
+        <p class="yellow-text">Fuel Cost Savings: $<span id="fuelCostSavingsResult">0</span></p>
+        <h6>Environmental Equivalents</h6>
+        <p><strong>Trees needed to absorb this CO<sub>2</sub>:</strong> <span id="treeEquivalentResult">0</span></p>
+        <p><strong>Equivalent to removing cars:</strong> <span id="carEquivalentResult">0</span></p>
+        <p><strong>Cost savings (carbon credits):</strong> $<span id="costSavingsResult">0</span></p>
+      </div>
+      <div class="card">
+        <h6>Emissions Comparison</h6>
+        <div class="chart-container"><canvas id="emissionsChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+  <script src="https://unpkg.com/globe.gl"></script>
+  <script>
+    (function() {
+      const airports = [
+        { iata: 'PEK', name: 'Beijing Capital Intl.', lat: 40.0799, lng: 116.6031 },
+        { iata: 'HND', name: 'Tokyo Haneda', lat: 35.5489, lng: 139.7798 },
+        { iata: 'NRT', name: 'Tokyo Narita', lat: 35.7653, lng: 140.3856 },
+        { iata: 'ICN', name: 'Seoul Incheon', lat: 37.4602, lng: 126.4407 },
+        { iata: 'HKG', name: 'Hong Kong Intl.', lat: 22.3080, lng: 113.9185 },
+        { iata: 'SIN', name: 'Singapore Changi', lat: 1.3644, lng: 103.9915 },
+        { iata: 'KUL', name: 'Kuala Lumpur Intl.', lat: 2.7456, lng: 101.7099 },
+        { iata: 'BKK', name: 'Bangkok Suvarnabhumi', lat: 13.6811, lng: 100.7501 },
+        { iata: 'DEL', name: 'Delhi Indira Gandhi', lat: 28.5562, lng: 77.1000 },
+        { iata: 'PVG', name: 'Shanghai Pudong', lat: 31.1434, lng: 121.8052 },
+        { iata: 'SYD', name: 'Sydney Kingsford Smith', lat: -33.9461, lng: 151.1772 },
+        { iata: 'MEL', name: 'Melbourne Tullamarine', lat: -37.6733, lng: 144.8430 },
+        { iata: 'BNE', name: 'Brisbane Intl.', lat: -27.3842, lng: 153.1171 },
+        { iata: 'PER', name: 'Perth Intl.', lat: -31.9403, lng: 115.9669 },
+        { iata: 'ADL', name: 'Adelaide Intl.', lat: -34.9450, lng: 138.5306 },
+        { iata: 'ADD', name: 'Addis Ababa Bole', lat: 8.9779, lng: 38.7993 },
+        { iata: 'JNB', name: 'Johannesburg OR Tambo', lat: -26.1337, lng: 28.2423 },
+        { iata: 'CPT', name: 'Cape Town Intl.', lat: -33.9648, lng: 18.6017 },
+        { iata: 'NBO', name: 'Nairobi Jomo Kenyatta', lat: -1.3192, lng: 36.9278 },
+        { iata: 'CAI', name: 'Cairo Intl.', lat: 30.1219, lng: 31.4056 },
+        { iata: 'LOS', name: 'Lagos Murtala Muhammed', lat: 6.5774, lng: 3.3212 },
+        { iata: 'YYZ', name: 'Toronto Pearson', lat: 43.6777, lng: -79.6306 },
+        { iata: 'YVR', name: 'Vancouver Intl.', lat: 49.1939, lng: -123.1845 },
+        { iata: 'YUL', name: 'Montreal Trudeau', lat: 45.4706, lng: -73.7408 },
+        { iata: 'YYC', name: 'Calgary Intl.', lat: 51.1224, lng: -114.0103 },
+        { iata: 'GRU', name: 'São Paulo Guarulhos', lat: -23.4356, lng: -46.4731 },
+        { iata: 'EZE', name: 'Buenos Aires Ezeiza', lat: -34.8222, lng: -58.5358 },
+        { iata: 'SCL', name: 'Santiago Arturo Merino Benítez', lat: -33.3930, lng: -70.7858 },
+        { iata: 'LIM', name: 'Lima Jorge Chávez', lat: -12.0219, lng: -77.1143 },
+        { iata: 'BOG', name: 'Bogotá El Dorado', lat: 4.7016, lng: -74.1469 },
+        { iata: 'MEX', name: 'Mexico City Benito Juárez', lat: 19.4363, lng: -99.0721 },
+        { iata: 'CUN', name: 'Cancún Intl.', lat: 21.0365, lng: -86.8771 },
+        { iata: 'ZRH', name: 'Zurich Airport', lat: 47.4647, lng: 8.5492 },
+        { iata: 'JFK', name: 'John F. Kennedy Intl.', lat: 40.6413, lng: -73.7781 },
+        { iata: 'LHR', name: 'London Heathrow', lat: 51.4700, lng: -0.4543 },
+        { iata: 'CDG', name: 'Paris Charles de Gaulle', lat: 49.0097, lng: 2.5479 },
+        { iata: 'DXB', name: 'Dubai Intl.', lat: 25.2532, lng: 55.3657 },
+        { iata: 'LAX', name: 'Los Angeles Intl.', lat: 33.9416, lng: -118.4085 },
+        { iata: 'FRA', name: 'Frankfurt Airport', lat: 50.0379, lng: 8.5622 }
+      ];
+
+      let emissionsChart, myGlobe;
+      const $ = jQuery, scope = '#airFreightCalculator ';
+      const els = {
+        fromAirport: document.querySelector(scope + '#fromAirport'),
+        toAirport: document.querySelector(scope + '#toAirport'),
+        numShipments: document.querySelector(scope + '#numShipments'),
+        totalVolume: document.querySelector(scope + '#totalVolume'),
+        swissWeight: document.querySelector(scope + '#swissWeight'),
+        competitorWeight: document.querySelector(scope + '#competitorWeight'),
+        swissMaxVolume: document.querySelector(scope + '#swissMaxVolume'),
+        competitorMaxVolume: document.querySelector(scope + '#competitorMaxVolume'),
+        emissionFactor: document.querySelector(scope + '#emissionFactor'),
+        fuelBurnFactor: document.querySelector(scope + '#fuelBurnFactor'),
+        fuelCostFactor: document.querySelector(scope + '#fuelCostFactor'),
+        treeFactor: document.querySelector(scope + '#treeFactor'),
+        carFactor: document.querySelector(scope + '#carFactor'),
+        costFactor: document.querySelector(scope + '#costFactor'),
+        calculateBtn: document.querySelector(scope + '#calculateBtn'),
+        resetBtn: document.querySelector(scope + '#resetBtn'),
+        errorMsg: document.querySelector(scope + '#errorMsg'),
+        resultsContainer: document.querySelector(scope + '#resultsContainer'),
+        fuelSavedResult: document.querySelector(scope + '#fuelSavedResult'),
+        swissContainersPerShipment: document.querySelector(scope + '#swissContainersPerShipment'),
+        competitorContainersPerShipment: document.querySelector(scope + '#competitorContainersPerShipment'),
+        totalSwissContainers: document.querySelector(scope + '#totalSwissContainers'),
+        totalCompetitorContainers: document.querySelector(scope + '#totalCompetitorContainers'),
+        fuelCostSavingsResult: document.querySelector(scope + '#fuelCostSavingsResult')
+      };
+
+      function populateAirports() {
+        airports.sort((a, b) => a.iata.localeCompare(b.iata)).forEach(airport => {
+          [els.fromAirport, els.toAirport].forEach(select => {
+            const opt = document.createElement('option');
+            opt.value = airport.iata;
+            opt.textContent = `${airport.iata} - ${airport.name}`;
+            select.appendChild(opt);
+          });
+        });
+        els.fromAirport.value = 'ZRH';
+        els.toAirport.value = 'JFK';
+      }
+
+      function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      }
+
+      function calculateEmissions() {
+        const fromCode = els.fromAirport.value, toCode = els.toAirport.value, numShipments = parseInt(els.numShipments.value) || 10,
+              totalVolume = parseFloat(els.totalVolume.value) || 20, swissWeight = parseInt(els.swissWeight.value) || 390,
+              competitorWeight = parseInt(els.competitorWeight.value) || 650, swissMaxVolume = parseFloat(els.swissMaxVolume.value) || 2.40,
+              competitorMaxVolume = parseFloat(els.competitorMaxVolume.value) || 2.30, emissionFactor = parseFloat(els.emissionFactor.value) || 0.25,
+              fuelBurnFactor = parseFloat(els.fuelBurnFactor.value) || 0.015, fuelCostFactor = parseFloat(els.fuelCostFactor.value) || 1.50,
+              treeFactor = parseFloat(els.treeFactor.value) || 25, carFactor = parseFloat(els.carFactor.value) || 4.6,
+              costFactor = parseFloat(els.costFactor.value) || 30;
+
+        if (!fromCode || !toCode || fromCode === toCode) {
+          els.errorMsg.textContent = !fromCode || !toCode ? 'Please select both airports' : 'Airports cannot be the same';
+          els.errorMsg.classList.remove('hidden');
+          els.resultsContainer.classList.add('hidden');
+          return;
+        }
+        els.errorMsg.classList.add('hidden');
+
+        const fromAirport = airports.find(a => a.iata === fromCode), toAirport = airports.find(a => a.iata === toCode),
+              distance = calculateDistance(fromAirport.lat, fromAirport.lng, toAirport.lat, toAirport.lng),
+              swissContainersPerShipment = Math.ceil(totalVolume / swissMaxVolume),
+              competitorContainersPerShipment = Math.ceil(totalVolume / competitorMaxVolume),
+              totalSwissContainers = swissContainersPerShipment * numShipments,
+              totalCompetitorContainers = competitorContainersPerShipment * numShipments,
+              swissEmissions = totalSwissContainers * totalVolume * distance * emissionFactor * (swissWeight / 390) / numShipments,
+              competitorEmissions = totalCompetitorContainers * totalVolume * distance * emissionFactor * (competitorWeight / 390) / numShipments,
+              savings = competitorEmissions - swissEmissions,
+              swissFuelBurn = totalSwissContainers * totalVolume * distance * fuelBurnFactor * (swissWeight / 390) / numShipments,
+              competitorFuelBurn = totalCompetitorContainers * totalVolume * distance * fuelBurnFactor * (competitorWeight / 390) / numShipments,
+              fuelSaved = competitorFuelBurn - swissFuelBurn,
+              fuelCostSavings = fuelSaved > 0 ? fuelSaved * fuelCostFactor : 0,
+              treeEquivalent = savings > 0 ? Math.round(savings / treeFactor) : 0,
+              carEquivalent = savings > 0 ? (savings / 1000) / carFactor : 0,
+              costSavings = savings > 0 ? (savings / 1000) * costFactor : 0;
+
+        document.querySelector(scope + '#fromAirportCode').textContent = fromCode;
+        document.querySelector(scope + '#toAirportCode').textContent = toCode;
+        document.querySelector(scope + '#distanceResult').textContent = Math.round(distance);
+        els.swissContainersPerShipment.textContent = swissContainersPerShipment;
+        els.competitorContainersPerShipment.textContent = competitorContainersPerShipment;
+        els.totalSwissContainers.textContent = totalSwissContainers;
+        els.totalCompetitorContainers.textContent = totalCompetitorContainers;
+        document.querySelector(scope + '#swissEmissionsResult').textContent = swissEmissions.toFixed(2);
+        document.querySelector(scope + '#competitorEmissionsResult').textContent = competitorEmissions.toFixed(2);
+        document.querySelector(scope + '#savingsResult').textContent = savings.toFixed(2);
+        els.fuelSavedResult.textContent = fuelSaved.toFixed(2);
+        els.fuelCostSavingsResult.textContent = fuelCostSavings.toFixed(2);
+        document.querySelector(scope + '#treeEquivalentResult').textContent = treeEquivalent;
+        document.querySelector(scope + '#carEquivalentResult').textContent = carEquivalent.toFixed(2);
+        document.querySelector(scope + '#costSavingsResult').textContent = costSavings.toFixed(2);
+        els.resultsContainer.classList.remove('hidden');
+
+        updateChart(swissEmissions, competitorEmissions);
+        updateGlobe(fromAirport, toAirport);
+      }
+
+      function updateChart(swissEmissions, competitorEmissions) {
+        const ctx = document.querySelector(scope + '#emissionsChart').getContext('2d');
+        if (emissionsChart) emissionsChart.destroy();
+        emissionsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Swiss Airtainer', 'Competitor'],
+            datasets: [{
+              label: 'CO2 Emissions (kg)',
+              data: [swissEmissions.toFixed(2), competitorEmissions.toFixed(2)],
+              backgroundColor: ['rgba(54, 162, 235, 0.7)', 'rgba(255, 99, 132, 0.7)'],
+              borderColor: ['rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)'],
+              borderWidth: 1
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'CO2 Emissions (kg)' } } }, plugins: { legend: { display: false } } }
+        });
+      }
+
+      function updateGlobe(fromAirport, toAirport) {
+        const globeContainer = document.querySelector(scope + '#globeViz');
+        let routeArc = [], airportPoints = [];
+        if (fromAirport && toAirport) {
+          routeArc = [{ startLat: fromAirport.lat, startLng: fromAirport.lng, endLat: toAirport.lat, endLng: toAirport.lng, color: 'red', name: `${fromAirport.iata} -> ${toAirport.iata}` }];
+          airportPoints = [fromAirport, toAirport].map(ap => ({ ...ap, size: 1, color: 'white' }));
+        }
+        if (!myGlobe) {
+          myGlobe = Globe()(globeContainer).backgroundColor('white').width(350).height(350)
+            .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg').showAtmosphere(true)
+            .atmosphereColor('lightblue').atmosphereAltitude(0.2).arcsData(routeArc).arcColor('color')
+            .arcDashLength(0.5).arcDashGap(0.2).arcDashInitialGap(() => Math.random() * 0.8).arcDashAnimateTime(4000)
+            .arcStroke(0.4).arcAltitude(0.12).pointsData(airportPoints).pointLabel('name').pointLat('lat')
+            .pointLng('lng').pointRadius('size').pointAltitude(0.005).pointColor('color').pointResolution(8);
+          myGlobe.controls().autoRotate = true; myGlobe.controls().autoRotateSpeed = 0.2; myGlobe.controls().enableZoom = true;
+          myGlobe.controls().minDistance = 200; myGlobe.controls().maxDistance = 600; myGlobe.pointOfView({ lat: 20, lng: 0, altitude: 2.5 });
+        } else {
+          myGlobe.arcsData(routeArc).pointsData(airportPoints);
+        }
+        if (fromAirport && toAirport) {
+          const midLat = (fromAirport.lat + toAirport.lat) / 2, midLng = ((fromAirport.lng + toAirport.lng) / 2 + (Math.abs(fromAirport.lng - toAirport.lng) > 180 ? 180 : 0)) % 360 - (midLng > 180 ? 360 : 0);
+          myGlobe.pointOfView({ lat: midLat, lng: midLng, altitude: 1.8 }, 1500);
+        }
+      }
+
+      function resetAssumptions() {
+        els.swissWeight.value = 390; els.competitorWeight.value = 650; els.swissMaxVolume.value = 2.40;
+        els.competitorMaxVolume.value = 2.30; els.emissionFactor.value = 0.25; els.fuelBurnFactor.value = 0.015;
+        els.fuelCostFactor.value = 1.50; els.treeFactor.value = 25; els.carFactor.value = 4.6; els.costFactor.value = 30;
+        els.numShipments.value = 10; els.totalVolume.value = 20;
+        if (!els.resultsContainer.classList.contains('hidden')) calculateEmissions();
+      }
+
+      populateAirports();
+      $(scope + '#fromAirport').select2({ placeholder: "Select departure airport" });
+      $(scope + '#toAirport').select2({ placeholder: "Select arrival airport" });
+      updateGlobe(null, null);
+      els.calculateBtn.addEventListener('click', calculateEmissions);
+      els.resetBtn.addEventListener('click', resetAssumptions);
+    })();
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</div>
